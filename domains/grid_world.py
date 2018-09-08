@@ -1,8 +1,7 @@
 # Skeleton of code taken from COMP6320 Artificial Intelligence
 # ANU
 
-""" This file implements Navigational Grid and ModifiedNavGrid
-
+""" This file implements the domains NavGrid and QNavGrid, and reduced versions of them
 """
 
 import random, abc
@@ -99,16 +98,22 @@ class Environment(object):
     
 
 class NavGrid(Environment):
-    """ NavigationalSymmetricGrid has a number of cells that are unreachable in the grid.  The grid is
-    symmetrical along the diagonal axis 
+    """ NavGrid environment 
+        The grid is symmetrical along the diagonal, except for a specified number of walls
     """
 
     def __init__(self, width, num_walls, num_antisym, walls_list=None, trans_probs=None):
         """ Make a new NavigationalGrid environment.
-            (NavGrid, int, int) --> int
+            width: int
+            num_walls : the number of walls to be placed in the grid
+            num_antisym : the number of walls not reflected on the diagonal
+            walls_list : optional array that specifies the location of the walls in the grid
+            trans_probs: optional dict that specifies the state transition probabilities
+            (NavGrid, int, int, int, array, dict) --> int
         """
 
         super(NavGrid, self).__init__(width, width, (0,0), (width-1, width-1))
+        
         # Use wall list if provided, else randomly generate the walls
         if walls_list is None:
             self.walls = set()
@@ -119,6 +124,8 @@ class NavGrid(Environment):
                 for j in range(width):
                     grid[i,j] = '.'
             
+            # Colour the edges of the grid 
+            # will use later when determining if placing a wall will make the grid unsolvable
             for i in range(width+1):
                 grid[-1, i] = 'R'
                 grid[i, width] = 'R'
@@ -128,9 +135,11 @@ class NavGrid(Environment):
             grid[-1,-1] = '#'
             grid[width, width] = '#'
             
+
             allcells = [x for x in itertools.product(range(width), range(width))] 
             random.shuffle(allcells)
             
+            # Place the walls in the grid, ensuring the grid is always completable
             i = 0
             while(len(self.walls) < num_walls or len(self.walls) < num_antisym) :
 
@@ -145,24 +154,16 @@ class NavGrid(Environment):
                     else:
                         self.walls.add(allcells[i])
                         self.anti_sym.add(allcells[i])
-#TODO add comments here
-                #print(i)        
+       
                 i += 1
                 if i == len(allcells):
                     break
-                
-                #wall = (np.random.randint(width), np.random.randint(width))
-                
-                
-                #if wall not in self.walls and wall not in bad_walls:
-                #    self.walls.append(wall)
-                    # add in reflection if not on the diagonal
-                #    if wall[0] != wall[1]:
-                #        self.walls.append((wall[1], wall[0]))
+
+        # Use the wall list if provided        
         else:
             self.walls = walls_list
         
-        # Debug code to print the grid output
+        ## Debug code to print the grid output
         #for i in range(-1, width+1):
         #    for j in range(-1, width+1):
         #        print(grid[i,j], end="")
@@ -179,13 +180,6 @@ class NavGrid(Environment):
         else:
             self.trans_probs = trans_probs
     
-        # define the reward for a given position
-        # DONT REALLY NEED THIS
-        #self.rewards = {}
-        #for i in self.width:
-        #    for j in self.height:
-        #        self.rewards[(i,k)] = -1
-        #self.rewards[self.goal_pos] = 10
     
     def generate(self, action):
         """ Apply the given action to the current state and return
@@ -209,16 +203,14 @@ class NavGrid(Environment):
             r = 10.0
         else:
             r = -1.0
-        
-        r = self.rewards[self.current_pos]
-        
+
         return (self.pos_to_state(self.current_pos), r)
     
     
     def generateReward(self, state, action):
         """ Apply the given action to the given state and return
-            an (observation, reward) pair.
-            (NavGrid, str) -> (int, float)
+            an (observation, reward) pair.  This doesn't update the agent's position
+            (NavGrid, (int, int), str) -> (int, float)
         """
         # Get the direction we go given our action
         a_action = np.random.choice(self.actions, 1, p=self.trans_probs[self.current_pos, action])[0]
@@ -261,26 +253,19 @@ class NavGrid(Environment):
     
 
 class NavGridReduced(NavGrid):
-    """ Takes a NavGrid class and reduces it under a MDP homomorphism
+    """ Takes a NavGrid class and reduces it under a MDP homomorphism.  
+        This reduces the grid to the upper diagonal.
     """
 
     def __init__(self, navgrid):
         """ Make a new NavGridReduced environment.
-                
-            Need to specify walls, and transition probs.
-            Then change it so that you only have access to the LU of the grid.
-            And change the 
-            
-            Will have to write a function later that changes an optimal policy in the lower grid,
-            and converts it back to the top.
-            
-            (NavigationalGrid, int, int, (int, int), (int, int), [int, ...]) -> int
+            (NavGridReduced, NavGrid) -> int
         """
-        
+        # Get the upper indices  of the original grid
         self.upper_indices = [(i,j) for i in range(navgrid.width) for j in range(navgrid.width) if i >= j]
-        super(NavGridReduced, self).__init__(navgrid.width, len(navgrid.walls), navgrid.walls, navgrid.trans_probs)
+        super(NavGridReduced, self).__init__(navgrid.width, len(navgrid.walls), len(navgrid.anti_sym), navgrid.walls, navgrid.trans_probs)
                 
-    
+ 
     def generate(self, action):
         """ Apply the given action to the current state and return
             an (observation, reward) pair.
@@ -293,9 +278,10 @@ class NavGridReduced(NavGrid):
         #Clever min-max bounds checking
         pos = self.current_pos
         pos = (min(max(pos[0] + a_dir[0], 0), self.width-1),
-            min(max(pos[1] + a_dir[1], 0), self.height-1))
+               min(max(pos[1] + a_dir[1], 0), self.height-1))
         
         # If we haven't moved into a wall, update the position
+        # (needs to be in the upper_indices as well)
         if pos not in self.walls and pos in self.upper_indices:
             self.current_pos = pos
         
@@ -323,36 +309,42 @@ class NavGridReduced(NavGrid):
                 pos = (x, y)
                 if pos in self.upper_indices:
                     if pos == self.current_pos:
-                        print("A   ", end=''),
+                        print("A ", end=''),
                     elif pos == self.init_pos:
-                        print("S   ", end=''),
+                        print("S ", end=''),
                     elif pos == self.goal_pos:
-                        print("G   ", end=''),
+                        print("G ", end=''),
                     elif pos in self.walls:
-                        print("X   ", end=''),
+                        print("X ", end=''),
                     else:
-                        print("*   ", end=''),
+                        print("* ", end=''),
                 else:
-                    print("    ", end=''),
+                    print("  ", end=''),
             print("") 
 
 
 class QNavGrid(NavGrid):
-    """ Takes a NavGrid as input, and produces a a navgrid that has approximate q-value symmetry
-    along the diagonal.
+    """ Takes a NavGrid as input, and produces a new navgrid that has approximate q-value symmetry
+        along the diagonal.
     """
 
     def __init__(self, navgrid, values):
         """ Make a new NavigationalGrid environment.
- 
-            (NavGrid, int, int) --> int
+            (QNavGrid, navgrid, dict) --> int
         """
 
         super(QNavGrid, self).__init__(navgrid.width, len(navgrid.walls), len(navgrid.anti_sym), navgrid.walls, navgrid.trans_probs)  
-    
+        self.anti_sym = navgrid.anti_sym
+        self.values = values
         self.newRewards = {}
 
-        # Update the rewards for state/actions
+        # Modify the rewards and transition probabilities to ensure the q-values remain reflected across
+        # the diagonal.  We set the rewards to be r_old + gamma[Value_i - Value_j], where i and j are either
+        # left and right, or up and down.
+        # Then we swap the transition probabilites for up and down, and left and right.
+        
+        # Calculate the value differences for the relevant states, 
+        # and store them to calculate rewards later on
         states = list(itertools.product(range(self.width), range(self.width)))
         for state in states:
             # Ignore walls or states above the diagonal
@@ -386,7 +378,7 @@ class QNavGrid(NavGrid):
     def generate(self, action, gamma):
         """ Apply the given action to the current state and return
             an (observation, reward) pair.
-            (NavGrid, str) -> (int, float)
+            (NavGrid, str, int) -> (int, float)
         """
         # Get the direction we go given our action
         a_action = np.random.choice(self.actions, 1, p=self.trans_probs[self.current_pos, action])[0]
@@ -400,7 +392,8 @@ class QNavGrid(NavGrid):
         # If we haven't moved into a wall, update the position
         if pos not in self.walls:
             self.current_pos = pos
-        
+
+        # Calculate the new reward using gamma, if we are in the lower diagonal of the grid
         x = 0
         if (pos, action) in self.newRewards:
             x = self.newRewards[pos,action]
@@ -431,6 +424,83 @@ class QNavGrid(NavGrid):
                     print("* ", end=''),
             print("") 
 
+
+
+class QNavGridReduced(NavGrid):
+    """ Takes a NavGrid class and reduces it under a MDP homomorphism.  
+        This reduces the grid to the upper diagonal.
+        #TODO test using the lower diagonals instead
+    """
+
+    def __init__(self, navgrid, newRewards=None):
+        """ Make a new NavGridReduced environment.
+            (QNavGridReduced, navgrid, dict) -> int
+        """
+        self.upper_indices = [(i,j) for i in range(navgrid.width) for j in range(navgrid.width) if i >= j]
+        self.newRewards = newRewards
+        super(QNavGridReduced, self).__init__(navgrid.width, len(navgrid.walls), len(navgrid.anti_sym), navgrid.walls, navgrid.trans_probs)
+                
+    
+    # Calculate the new reward using gamma, if we are in the lower diagonal of the grid
+    def generate(self, action, gamma):
+        """ Apply the given action to the current state and return
+            an (observation, reward) pair.
+            (NavGridReduced, str, gamma) -> (int, float)
+        """
+        # Get the direction we go given our action
+        a_action = np.random.choice(self.actions, 1, p=self.trans_probs[self.current_pos, action])[0]
+        a_dir = self.action_dirs[a_action]
+        
+        #Clever min-max bounds checking
+        pos = self.current_pos
+        pos = (min(max(pos[0] + a_dir[0], 0), self.width-1),
+            min(max(pos[1] + a_dir[1], 0), self.height-1))
+        
+        # If we haven't moved into a wall, update the position
+        # (needs to be in the upper_indices as well)
+        if pos not in self.walls and pos in self.upper_indices:
+            self.current_pos = pos
+        
+        x = 0
+        if (pos, action) in self.newRewards:
+            x = self.newRewards[pos,action]
+        
+        if pos == self.goal_pos:
+            r = 10.0 + gamma * x
+        else:
+            r = -1.0 + gamma * x
+        return (self.pos_to_state(self.current_pos), r)
+
+
+    def pos_to_state(self, pos):
+        """ Return the index (representing the state) of the current position.
+            #TODO: Check if this is fine
+            (Environment, (int, int)) -> int
+        """
+        return self.upper_indices.index(pos)
+    
+    
+    def print_map(self):
+        """ Print an ASCII map of the simulation.
+            (NavGrid) -> None
+        """
+        for y in range(self.height):
+            for x in range(self.width):
+                pos = (x, y)
+                if pos in self.upper_indices:
+                    if pos == self.current_pos:
+                        print("A ", end=''),
+                    elif pos == self.init_pos:
+                        print("S ", end=''),
+                    elif pos == self.goal_pos:
+                        print("G ", end=''),
+                    elif pos in self.walls:
+                        print("X ", end=''),
+                    else:
+                        print("* ", end=''),
+                else:
+                    print("  ", end=''),
+            print("") 
 
 
 
