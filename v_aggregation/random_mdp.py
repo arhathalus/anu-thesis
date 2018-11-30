@@ -6,49 +6,45 @@ Student number: u5530441
 import numpy as np
 
 
-def gen_matrix(length, b):
+def gen_matrix(length, b, epsilon):
     """
-    Generate invertible, quasipositive matrix
+    Generates an invertible, quasipositive matrix of dimensions length x length
+    length: int
+    b: int - the branch factor, the number of non-negligable transition probabilities
+    epsilon: double:  the small probability of transitioning to any state.  This should be close to 0.
         """
-    count = 0
-    while True:
-        mat = []
-        for j in range(length):
-            row = [0]*length
-            i = 0
-            while i < b:
-                index = np.random.randint(length)
-                if row[index] == 0:
-                    row[index] = np.random.randint(0, 100)/100
-                    i += 1
+    mat = []
+    for j in range(length):
+        # Initialise the matrix with epsilon entries
+        row = [epsilon]*length
 
-            # Normalise row so that the sum of the entries is 1
-            row = np.array(row)
-            total = row.sum()
-            for i in range(len(row)):
-                row[i] = row[i]/total
-            
-            mat.append(row)
+        # add transition probabilites to b random entries
+        i = 0
+        while i < b:
+            index = np.random.randint(length)
+            if row[index] == epsilon:
+                # Sample from the interval [epsilon, 1)
+                row[index] = (1-epsilon)*np.random.random_sample() + epsilon
+                i += 1
+
+        # Normalise row so that the sum of the entries is 1
+        row = np.array(row)
+        total = row.sum()
+        for i in range(len(row)):
+            row[i] = row[i]/total
         
-        mat = np.array(mat)
-        
-        # Check that the matrix is invertible
-        if np.linalg.cond(mat) < 1/sys.float_info.epsilon:
-            return mat
-            #check quasipositive:
-                if False not in np.isreal(np.linalg.eig(mat)[0]):
-                    return count
-        count += 1
-        if (count % 1000) == 0:
-            print(count)
-    # So what we do here 
+        mat.append(row)
     
+    mat = np.array(mat)
+    
+    # Check that the matrix is invertible
+    if np.linalg.cond(mat) < 1/sys.float_info.epsilon:
+        return mat
+    else:
+        return 0
 
 
-    return count
-
-
-def random_mdp(length, aggregation, num_actions, noise, b):
+def random_mdp(length, aggregation, num_actions, noise, b, epsilon):
     """
     Generate a random MDP that is able to be v_aggregated
     """
@@ -58,54 +54,35 @@ def random_mdp(length, aggregation, num_actions, noise, b):
     for i in range(length):
     # Generate vector v of length s_phi from uniform distribution (0,100)
     # repeat the entries according to the aggregation factor, and add a small amount of random noise to each entry
-        num = np.random.randint(100)
+        num = 100*np.random.random_sample()
         for j in range(aggregation):
             # Add in random noise for each of these
-            v.append(num + np.random.randint (-noise, noise)
+            v.append(num + 2*noise*np.random.random_sample() -noise)
 
     v = np.array(v)
     
-    
-    # Generate random Transition matrices
+    # Generate random transition matrices, that are invertible and quasipositive
 
     transition_matrices = []
 
-    for a in range(num_actions):
-        flag = False
-        while flag = False:
-            mat = []
-            for j in range(length*aggregation):
-                row = [0]*length*aggregation
-                i = 0
-                while i < b:
-                    index = np.random.randint(length*aggregation)
-                    if row[index] == 0:
-                        row[index] = np.random.rand()
-                        i += 1
+    while len(transition_matrices) < num_actions
+            temp_mat = gen_matrix(length, b, epsilon)
+            if temp_mat:
+                transition_matrices.append(temp_mat)
 
-                # Normalise row so that the sum of the entries is 1
-                row = np.array(row)
-                total = row.sum()
-                for i in range(len(row)):
-                    row[i] = row[i]/total
-                
-                mat.append(row)
-            
-            # Check that the matrix is invertible
-            if np.linalg.cond(mat) < 1/sys.float_info.epsilon:
-                flag = True
-
-        # So what we do here 
-        mat = np.array(mat)
+   
+    # Generate the q-value vectors
+    q_vals = {}
+    i = 0
+    while len(q_vals) < num_actions:
         
-        transition_matrices.append(mat)
-            
-
-    # entries from uniform U(0,1), max of b elements (b is the branching factor)
-    # normalise each row so that the sum of them is 1
-    
-    # then check if the matrix T is aperdiodic and irreducible.  
-    
+        noise_vec = 2*noise*np.random.random_sample(length*aggregation) - noise
+        q_vec = np.array(np.random.random_sample(length*aggregation))*v + noise_vec
+        # Double check that everything is less than the v vector
+        if False not in (q_vec < v):
+            q_vals[i] = q_vec
+            i += 1
+          
     
     # Solve for the optimal reward matrix/vector r
     # r = (T^-1 - \gamma I)v*
