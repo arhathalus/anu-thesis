@@ -86,10 +86,7 @@ def random_mdp(length, aggregation, num_actions, noise, b, epsilon):
     
     # Solve for the optimal reward matrix/vector r
     # r = (T^-1 - \gamma I)v*
-    
-    # for each other action a-1
-    # create q vectors q^a that are all  elementwise less than r
-    # so just sample from U(0, r[i]) to create the vector., and add some random noise
+    r = np.matmul((np.linalg.inv(transition_matrices[0]) - gamma*np.identity(length*aggregation)), v)
     # and then r^a = T^-1(q^a - \gamma T v*)
     
     # When doing this entire thing, ensure that the policy is uniform.  I.e. that the optimal action 
