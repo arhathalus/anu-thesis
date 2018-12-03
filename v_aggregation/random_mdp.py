@@ -4,6 +4,7 @@ Student number: u5530441
 """
 
 import numpy as np
+import sys
 
 
 def gen_matrix(length, b, epsilon):
@@ -44,7 +45,7 @@ def gen_matrix(length, b, epsilon):
         return 0
 
 
-def random_mdp(length, aggregation, num_actions, noise, b, epsilon):
+def random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma):
     """
     Generate a random MDP that is able to be v_aggregated
     """
@@ -65,9 +66,9 @@ def random_mdp(length, aggregation, num_actions, noise, b, epsilon):
 
     transition_matrices = []
 
-    while len(transition_matrices) < num_actions
-            temp_mat = gen_matrix(length, b, epsilon)
-            if temp_mat:
+    while len(transition_matrices) < num_actions:
+            temp_mat = gen_matrix(length*aggregation, b, epsilon)
+            if type(temp_mat) != int:
                 transition_matrices.append(temp_mat)
 
    
@@ -83,19 +84,28 @@ def random_mdp(length, aggregation, num_actions, noise, b, epsilon):
             q_vals[i] = q_vec
             i += 1
           
-    
+    rewards = []
+    transition_inverse = np.linalg.inv(transition_matrices[0])
     # Solve for the optimal reward matrix/vector r
     # r = (T^-1 - \gamma I)v*
-    r = np.matmul((np.linalg.inv(transition_matrices[0]) - gamma*np.identity(length*aggregation)), v)
-    # and then r^a = T^-1(q^a - \gamma T v*)
+    r = np.matmul(transition_inverse - gamma*np.identity(length*aggregation), v)
+    rewards.append(r)
+    
+    # find the rest of the reward vectors
+    # r_a = T^-1(q_a - \gamma T v*)
+    for i in range(1, num_actions):
+        r = np.matmul(transition_inverse, q_vals[i] - np.matmul(gamma*transition_matrices[0], v))
+        rewards.append(r)
+
+    #TODO Confirm that i can just use the one transition matrix here.
     
     # When doing this entire thing, ensure that the policy is uniform.  I.e. that the optimal action 
     # for each of the states that will be aggregated is the same.  (
     # This should be fine by default. If the optimal action is always the same, then we are fine
    
-    
-    
-    
-    
-    
-    return 1
+    return v, transition_matrices, q_vals, rewards
+
+
+# TODO, test that this is working ---run value iteration over it to make sure it works as desired
+
+
