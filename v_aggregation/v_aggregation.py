@@ -20,7 +20,11 @@ v, transition_matrices, q_vals, rewards = random_mdp(length, aggregation, num_ac
 
 # Reduce the MDP
 B = {}
-P = np.zeros((length, length))
+# initialise the new transition matrices
+P = []
+for _ in range(num_actions):
+    P.append(np.zeros((length, length)))
+    
 # Construct stochastic inverse
 for a in range(num_actions):
 
@@ -58,14 +62,73 @@ for a in range(num_actions):
             for j in range(aggregation):
                 for l in range(aggregation):
                   temp += B[i*aggregation+j, i, a]*transition_matrices[a][i*aggregation+j][k*aggregation+l]  
-            P[i][k] = temp
+            P[a][i][k] = temp
             
            
-# Construct the reduced MDP
+# Run VI over the MDP to determine v* and optimal policy
+
+# TODO Check this, i haven't made a new rewards function
+
+# Initialise the values
+values = [0]*length            
+eps = 0.001
+pi = {}
+
+while True:
+    delta = 0    
+    for state in range(length):
+        temp_v = values[state]
+        
+        #calculate the max value functions
+        val = -500
+        for a in range(num_actions):
+            # get the probabilites and the transitions
+            temp_val = 0
+            for s_prime in range(length):
+                r = rewards[a][s_prime]
+                temp_val += P[a][state][s_prime]*(r + gamma*values[s_prime])
+
+            if temp_val > val:
+                val = temp_val
+                pi[state] = a
+        
+        values[state] = val
+        delta = max(delta, abs(temp_v - values[state]))
+        
+    if delta < eps:
+        break
 
 
+# Learn optimal lifted policy
+lifted_policy = {}
+for s in range(length*aggregation):
+    lifted_policy[s] = pi[np.floor(s/aggregation)]
+    
+# Perform policy iteration
+bigValues = [0]*length*aggregation
 
-# Run VI over the MDP
+while True:
+    delta = 0    
+    for state in range(length*aggregation):
+        temp_v = bigValues[state]
+        
+        # get action from policy:
+        a = lifted_policy[state]
 
+        # get the probabilites and the transitions
+        temp_val = 0
+        for s_prime in range(length*aggregation):
+            r = rewards[a][s_prime]
+            temp_val += transition_matrices[a][state][s_prime]*(r + gamma*bigValues[s_prime])
+
+        
+        bigValues[state] = temp_val
+        delta = max(delta, abs(temp_v - bigValues[state]))
+        
+    if delta < eps:
+        break
+
+
+#TODO Ask Sultan -- if i perform the policy learning whilst doing value iteration, do i lose anything?
 
 # Run policy aggregation
