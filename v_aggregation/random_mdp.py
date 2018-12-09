@@ -94,7 +94,8 @@ def random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma):
     # find the rest of the reward vectors
     # r_a = T^-1(q_a - \gamma T v*)
     for i in range(1, num_actions):
-        r = np.matmul(transition_inverse, q_vals[i] - np.matmul(gamma*transition_matrices[0], v))
+        transition_inverse = np.linalg.inv(transition_matrices[i])
+        r = np.matmul(transition_inverse, q_vals[i] - np.matmul(gamma*transition_matrices[i], v))
         rewards.append(r)
 
     #TODO Confirm that i can just use the one transition matrix here.
@@ -109,3 +110,6 @@ def random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma):
 # TODO, test that this is working ---run value iteration over it to make sure it works as desired
 
 
+# Two issues
+# Im getting optimal action is 1, but it should be 0
+# left eigenvectors are returning as constant.
