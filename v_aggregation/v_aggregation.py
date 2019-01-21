@@ -75,7 +75,6 @@ def experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps):
 
     # Initialise the values
     values = [0]*length            
-    #eps = 0.001
     pi = {}
 
     while True:
@@ -162,17 +161,22 @@ def experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps):
 # graph results , first lets create graph similar to the one in the paper . 
 #2 actions, 64 states, aggregation factor 16, branching factor 4, noise 5
 
-length = 4
-aggregation = 16
+noises = [1,5,10,15,20]
+aggregations = [2,4,16,32]
+length = 2
+aggregation = 2
 num_actions = 2
-noise = 5
-b = 4
+b = 2
 epsilon = 0.0005
-gamma = 0.4
-eps = 0.001
+gamma = 0.8
+eps = 0.000001
 
-v, bigValues, values, lifted_policy, pi, rho_vec = experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps)
 
+#for noise in noise: 
+#    v, bigValues, values, lifted_policy, pi, rho_vec = experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps)
+noise = 5
+v, bigValues, values, lifted_policy, pi, rho_vec = experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps)    
+    
 # Want to graph np.abs(v - bigValues) against rho_vec
 
 print(pi)
@@ -181,6 +185,7 @@ print(lifted_policy)
 
 #print(np.abs(v-bigValues))
 #print(rho_vec)
+
 
 #fix, ax = plt.subplots()
 #ax.scatter(rho_vec, np.abs(v-bigValues))

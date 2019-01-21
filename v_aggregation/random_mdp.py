@@ -49,55 +49,104 @@ def random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma):
     """
     Generate a random MDP that is able to be v_aggregated
     """
+    flag = True
+    # Workaround until i figure out the issues
+    while flag:
     
-    v = []
-    
-    for i in range(length):
-    # Generate vector v of length s_phi from uniform distribution (0,100)
-    # repeat the entries according to the aggregation factor, and add a small amount of random noise to each entry
-        num = 100*np.random.random_sample()
-        for j in range(aggregation):
-            # Add in random noise for each of these
-            v.append(num + 2*noise*np.random.random_sample() -noise)
-
-    v = np.array(v)
-    
-    # Generate random transition matrices, that are invertible and quasipositive
-
-    transition_matrices = []
-
-    while len(transition_matrices) < num_actions:
-            temp_mat = gen_matrix(length*aggregation, b, epsilon)
-            if type(temp_mat) != int:
-                transition_matrices.append(temp_mat)
-
-   
-    # Generate the q-value vectors
-    q_vals = {}
-    i = 0
-    while len(q_vals) < num_actions:
+        v = []
         
-        noise_vec = 2*noise*np.random.random_sample(length*aggregation) - noise
-        q_vec = np.array(np.random.random_sample(length*aggregation))*v + noise_vec
-        # Double check that everything is less than the v vector
-        if False not in (q_vec < v):
-            q_vals[i] = q_vec
-            i += 1
-          
-    rewards = []
-    transition_inverse = np.linalg.inv(transition_matrices[0])
-    # Solve for the optimal reward matrix/vector r
-    # r = (T^-1 - \gamma I)v*
-    r = np.matmul(transition_inverse - gamma*np.identity(length*aggregation), v)
-    rewards.append(r)
-    
-    # find the rest of the reward vectors
-    # r_a = T^-1(q_a - \gamma T v*)
-    for i in range(1, num_actions):
-        #transition_inverse = np.linalg.inv(transition_matrices[i])
-        r = np.matmul(transition_inverse, q_vals[i] - np.matmul(gamma*transition_matrices[0], v))
-        rewards.append(r)
+        for i in range(length):
+        # Generate vector v of length s_phi from uniform distribution (0,100)
+        # repeat the entries according to the aggregation factor, and add a small amount of random noise to each entry
+            num = 100*np.random.random_sample()
+            for j in range(aggregation):
+                # Add in random noise for each of these
+                v.append(num + 2*noise*np.random.random_sample() -noise)
 
+        v = np.array(v)
+        
+        # Generate random transition matrices, that are invertible and quasipositive
+
+        transition_matrices = []
+
+        while len(transition_matrices) < num_actions:
+                temp_mat = gen_matrix(length*aggregation, b, epsilon)
+                if type(temp_mat) != int:
+                    transition_matrices.append(temp_mat)
+
+    
+        # Generate the q-value vectors
+        q_vals = {}
+        i = 0
+        while len(q_vals) < num_actions:
+            
+            noise_vec = 2*noise*np.random.random_sample(length*aggregation) - noise
+            q_vec = np.array(np.random.random_sample(length*aggregation))*v + noise_vec
+            # Double check that everything is less than the v vector
+            if False not in (q_vec < v):
+                q_vals[i] = q_vec
+                i += 1
+            
+        rewards = []
+        transition_inverse = np.linalg.inv(transition_matrices[0])
+        # Solve for the optimal reward matrix/vector r
+        # r = (T^-1 - \gamma I)v*
+        r = np.matmul(transition_inverse - gamma*np.identity(length*aggregation), v)
+        rewards.append(r)
+        
+        # find the rest of the reward vectors
+        # r_a = T^-1(q_a - \gamma T v*)
+        for i in range(1, num_actions):
+            #transition_inverse = np.linalg.inv(transition_matrices[i])
+            r = np.matmul(transition_inverse, q_vals[i] - np.matmul(gamma*transition_matrices[0], v))
+            rewards.append(r)
+
+        # Do Value-Iteration and make sure we can learn the proper values
+        values = [0]*(length*aggregation)            
+        eps = 0.0000000001
+        pi = {}
+
+        while True:
+            delta = 0    
+            for state in range(length*aggregation):
+                temp_v = values[state]
+                
+                #calculate the max value functions
+                val = -500
+                for a in range(num_actions):
+                    # get the probabilites and the transitions
+                    temp_val = 0
+                    for s_prime in range(length*aggregation):
+                        r = rewards[a][s_prime]
+                        temp_val += transition_matrices[a][state][s_prime]*(r + gamma*values[s_prime])
+
+                    if temp_val > val:
+                        val = temp_val
+                        pi[state] = a
+                
+                values[state] = val
+                delta = max(delta, abs(temp_v - values[state]))
+        
+            if delta < eps:
+                break
+        
+        # check that the optimal policy is action 0
+        pi_flag = True
+        for i in pi.keys():
+            if pi[i] != 0:
+                pi_flag = False
+        print(v)
+        print(values)
+        print(pi)
+        # check that the learned values are approximately the actual values
+        learned_flag = True
+        if False in np.isclose(v, values, atol=2):
+            learned_flag = False
+            
+        if pi_flag and learned_flag:
+            flag = False
+            
+            
     #TODO Confirm that i can just use the one transition matrix here.
     
     # When doing this entire thing, ensure that the policy is uniform.  I.e. that the optimal action 
@@ -106,30 +155,36 @@ def random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma):
    
     return v, transition_matrices, q_vals, rewards
 
+
+### Testing loop for debugging purposes
+
 length = 2
 aggregation = 2
 num_actions = 2
-noise = 1
+noise = 5
 b = 2
 epsilon = 0.0005
 gamma = 0.8
-eps = 0.001
+eps = 0.0000000001
 
 v, transition_matrices, q_vals, rewards = random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma)
 #print(random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma))
 
-print("values:")
-print(v)
+#print("values:")
+#print(v)
 #print("T:")
 #print(transition_matrices)
-#print("Q:")
-#print(q_vals)
-#print("R:")
-#print(rewards)
+#print()
+#print(np.linalg.cond(transition_matrices))
+#print()
+print("Q:")
+print(q_vals)
+print("R:")
+print(rewards)
 
  # Initialise the values
 values = [0]*(length*aggregation)            
-eps = 0.000000000001
+#eps = 0.000000000001
 pi = {}
 
 while True:
@@ -157,10 +212,11 @@ while True:
         break
 
 
-
+print("values:")
+print(v)
 print("learned values ")
 print(values)
-#print(v)
+
 print("Policy")
 print(pi)    
 
@@ -184,7 +240,7 @@ print(pi)
 # Sometimes it is working, other times VI doesnt find it at all and i am getting wrong optimal actions
 # Question: is something going wrong when i learn the wrong thing?  or is it just a VI problem somehow?
 
-
+#TODO Figure out why sometimes i get weird results
 
 # left eigenvectors are returning as constant. (Why is this?  check this out)
 # I have fixed some eigenvector problems, but check this later to make sure i have no more problems.
