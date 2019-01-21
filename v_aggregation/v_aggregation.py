@@ -27,11 +27,15 @@ def experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps):
 
         # solve the stationary distribution p_a T_a = p_a (the left eigenvector)
         e, vl = eig(transition_matrices[a], left=True, right=False)
-        # Sanity check that the eigenvalue is 1
-        assert(e[0] - 1 < 0.001)
-    
-        rho = vl[:,0].T
+
+        # Pull out the eigenvalue that is equal to 1
+        index = np.where(np.isclose(np.real(e), 1))
+
+        # create the left eigenvector (and discard the imaginary part (which should be zero)
+        rho = np.real(vl[:,index[0][0]].T)
         rhos.append(rho)
+
+
         # calculate the stochastic inverse  
         # B(s | phi(s), a)
         denoms = []

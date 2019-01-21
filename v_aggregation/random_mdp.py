@@ -94,8 +94,8 @@ def random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma):
     # find the rest of the reward vectors
     # r_a = T^-1(q_a - \gamma T v*)
     for i in range(1, num_actions):
-        transition_inverse = np.linalg.inv(transition_matrices[i])
-        r = np.matmul(transition_inverse, q_vals[i] - np.matmul(gamma*transition_matrices[i], v))
+        #transition_inverse = np.linalg.inv(transition_matrices[i])
+        r = np.matmul(transition_inverse, q_vals[i] - np.matmul(gamma*transition_matrices[0], v))
         rewards.append(r)
 
     #TODO Confirm that i can just use the one transition matrix here.
@@ -106,10 +106,85 @@ def random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma):
    
     return v, transition_matrices, q_vals, rewards
 
+length = 2
+aggregation = 2
+num_actions = 2
+noise = 1
+b = 2
+epsilon = 0.0005
+gamma = 0.8
+eps = 0.001
 
-# TODO, test that this is working ---run value iteration over it to make sure it works as desired
+v, transition_matrices, q_vals, rewards = random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma)
+#print(random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma))
+
+print("values:")
+print(v)
+#print("T:")
+#print(transition_matrices)
+#print("Q:")
+#print(q_vals)
+#print("R:")
+#print(rewards)
+
+ # Initialise the values
+values = [0]*(length*aggregation)            
+eps = 0.000000000001
+pi = {}
+
+while True:
+    delta = 0    
+    for state in range(length*aggregation):
+        temp_v = values[state]
+        
+        #calculate the max value functions
+        val = -500
+        for a in range(num_actions):
+            # get the probabilites and the transitions
+            temp_val = 0
+            for s_prime in range(length*aggregation):
+                r = rewards[a][s_prime]
+                temp_val += transition_matrices[a][state][s_prime]*(r + gamma*values[s_prime])
+
+            if temp_val > val:
+                val = temp_val
+                pi[state] = a
+        
+        values[state] = val
+        delta = max(delta, abs(temp_v - values[state]))
+  
+    if delta < eps:
+        break
+
+
+
+print("learned values ")
+print(values)
+#print(v)
+print("Policy")
+print(pi)    
+
+#from scipy.linalg import eig
+#for a in range(num_actions):
+#
+#    # solve the stationary distribution p_a T_a = p_a (the left eigenvector)
+#    e, vl = eig(transition_matrices[a], left=True, right=False)
+#    
+#    # Pull out the eigenvalue that is equal to 1
+#    index = np.where(np.isclose(np.real(e), 1))
+#    print(index)
+#    # create the left eigenvector (and cast to real as well)
+#    print(vl[:,index[0][0]].T)
+#    print(np.real(vl[:,index[0][0]].T))
 
 
 # Two issues
-# Im getting optimal action is 1, but it should be 0
-# left eigenvectors are returning as constant.
+# Im sometimes getting optimal action is 1, but it should be 0, and VI learns the wrong values
+# Need to charactrise the problem here --- what do the bad domains look like?
+# Sometimes it is working, other times VI doesnt find it at all and i am getting wrong optimal actions
+# Question: is something going wrong when i learn the wrong thing?  or is it just a VI problem somehow?
+
+
+
+# left eigenvectors are returning as constant. (Why is this?  check this out)
+# I have fixed some eigenvector problems, but check this later to make sure i have no more problems.
