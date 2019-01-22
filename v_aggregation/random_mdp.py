@@ -61,7 +61,12 @@ def random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma):
         num = 100*np.random.random_sample()
         for j in range(aggregation):
             # Add in random noise for each of these
-            v.append(num + 2*noise*np.random.random_sample() -noise)
+            while True:
+                temp_val = num + 2*noise*np.random.random_sample() -noise
+                if temp_val > 0:
+                    break
+            v.append(temp_val)
+            
 
     v = np.array(v)
     
@@ -78,10 +83,17 @@ def random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma):
     # Generate the q-value vectors
     q_vals = {}
     i = 0
+    j = 0
     while len(q_vals) < num_actions:
-        
-        noise_vec = 2*noise*np.random.random_sample(length*aggregation) - noise
-        q_vec = np.array(np.random.random_sample(length*aggregation))*v + noise_vec
+        j += 1
+        if j > 120:
+            print(v)
+            #print(noise_vec)
+            print(q_vec)
+            print(q_vec < v)
+        #TODO Add this back in if needed
+        #noise_vec = 2*noise*np.random.random_sample(length*aggregation) - noise
+        q_vec = np.array(np.random.random_sample(length*aggregation))*v #+ noise_vec
         # Double check that everything is less than the v vector
         if False not in (q_vec < v):
             q_vals[i] = q_vec
@@ -159,11 +171,11 @@ def random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma):
 ### Testing loop for debugging purposes
 """
 length = 2
-aggregation = 2
+aggregation = 4
 num_actions = 2
 noise = 5
 b = 2
-epsilon = 0.0005
+epsilon = 0.0001
 gamma = 0.8
 eps = 0.0000000001
 

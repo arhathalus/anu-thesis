@@ -52,7 +52,6 @@ def experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps):
             #B[s, phi_s, a] = rho(s)/denom[phi_s]
                 B[(i*aggregation+j, i, a)] = rho[i*aggregation+j]/denoms[i]
         
-        print(B)
         # calculate the new prob distribution and reward matrices
         for i in range(length):
             for k in range(length):
@@ -70,13 +69,13 @@ def experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps):
 
                 P[a][i][k] = np.real(temp_prob)
                 R[a][i] = np.real(temp_reward)
-                
-            
-    # Run VI over the MDP to determine v* and optimal policy
+
+        
+    # Run VI over the aggregated MDP to determine v* and optimal policy
 
     # Initialise the values
     values = [0]*length            
-    pi = {}
+    #pi = {}
 
     while True:
         delta = 0    
@@ -91,10 +90,9 @@ def experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps):
                 for s_prime in range(length):
                     r = R[a][s_prime]
                     temp_val += P[a][state][s_prime]*(r + gamma*values[s_prime])
-                    #TODO Check these values, getting overflow errors
                 if temp_val > val:
                     val = temp_val
-                    pi[state] = a
+                    #pi[state] = a
             
             values[state] = val
             delta = max(delta, abs(temp_v - values[state]))
@@ -103,6 +101,28 @@ def experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps):
             break
 
 
+    # Learn the optimal policy
+    pi = {}
+    
+    for state in range(length):
+        first_flag = True
+        temp_v = values[state]
+            
+        #calculate the max value functions
+        for a in range(num_actions):
+            # get the probabilites and the transitions
+            temp_val = 0
+            for s_prime in range(length):
+                r = R[a][s_prime]
+                temp_val += P[a][state][s_prime]*(r + gamma*values[s_prime])
+            if first_flag:
+                first_flag = False
+                pi[state] = a
+                val = temp_val
+            elif temp_val > val:
+                val = temp_val
+                pi[state] = a
+        
     # Learn optimal lifted policy
     lifted_policy = {}
     for s in range(length*aggregation):
@@ -164,10 +184,10 @@ def experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps):
 
 noises = [1,5,10,15,20]
 aggregations = [2,4,16,32]
-length = 2
-aggregation = 2
+length = 4
+aggregation = 16
 num_actions = 2
-b = 2
+b = 4
 epsilon = 0.0005
 gamma = 0.8
 eps = 0.000001
@@ -175,21 +195,23 @@ eps = 0.000001
 
 #for noise in noise: 
 #    v, bigValues, values, lifted_policy, pi, rho_vec = experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps)
-noise = 5
-v, bigValues, values, lifted_policy, pi, rho_vec = experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps)    
+
+for i in range(100):
+    noise = 5
+    v, bigValues, values, lifted_policy, pi, rho_vec = experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps)    
     
 # Want to graph np.abs(v - bigValues) against rho_vec
 
-#print(pi)
-#print("--------------------")
+    print(pi)
+    print("--------------------")
 #print(lifted_policy)
 
 #print(np.abs(v-bigValues))
 #print(rho_vec)
 
 
-#fix, ax = plt.subplots()
-#ax.scatter(rho_vec, np.abs(v-bigValues))
+fix, ax = plt.subplots()
+ax.scatter(rho_vec, np.abs(v-bigValues))
 #plt.show()
 
 
