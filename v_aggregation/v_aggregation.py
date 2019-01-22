@@ -31,11 +31,12 @@ def experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps):
         # Pull out the eigenvalue that is equal to 1
         index = np.where(np.isclose(np.real(e), 1))
 
-        # create the left eigenvector (and discard the imaginary part (which should be zero)
-        rho = np.real(vl[:,index[0][0]].T)
+        # create the leftg eigenvector (and discard the imaginary part (which should be zero)
+        rho = np.abs(np.real(vl[:,index[0][0]].T))
+        #print(rho)
         rhos.append(rho)
 
-
+        # for all states that map to s, sum the rho of that action
         # calculate the stochastic inverse  
         # B(s | phi(s), a)
         denoms = []
@@ -49,9 +50,9 @@ def experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps):
         for i in range(length):
             for j in range(aggregation):
             #B[s, phi_s, a] = rho(s)/denom[phi_s]
-                B[(i*aggregation+j, i, a)] = rho[i*j+j]/denoms[i]
+                B[(i*aggregation+j, i, a)] = rho[i*aggregation+j]/denoms[i]
         
-        
+        print(B)
         # calculate the new prob distribution and reward matrices
         for i in range(length):
             for k in range(length):
@@ -90,7 +91,7 @@ def experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps):
                 for s_prime in range(length):
                     r = R[a][s_prime]
                     temp_val += P[a][state][s_prime]*(r + gamma*values[s_prime])
-
+                    #TODO Check these values, getting overflow errors
                 if temp_val > val:
                     val = temp_val
                     pi[state] = a
@@ -179,9 +180,9 @@ v, bigValues, values, lifted_policy, pi, rho_vec = experiment(length, aggregatio
     
 # Want to graph np.abs(v - bigValues) against rho_vec
 
-print(pi)
-print("--------------------")
-print(lifted_policy)
+#print(pi)
+#print("--------------------")
+#print(lifted_policy)
 
 #print(np.abs(v-bigValues))
 #print(rho_vec)
