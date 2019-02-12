@@ -34,8 +34,11 @@ def experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps):
 
         # create the left eigenvector (and discard the imaginary part (which should be zero)
         rho = np.abs(np.real(vl[:,index[0][0]].T))
-        print(rho)
-        rhos.append(rho)
+        
+        # normalise the eigenvector to form the stationary distribution
+        new_rho = rho/np.sum(rho)
+        #print(rho)
+        rhos.append(new_rho)
 
         # for all states that map to s, sum the rho of that action
         # calculate the stochastic inverse  
@@ -197,15 +200,13 @@ noise = 1
 #for noise in noise: 
 #    v, bigValues, values, lifted_policy, pi, rho_vec = experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps)
 
-#TODO Double check that this whole function is working as plans
-
 # Then, for each parameter set, generate 1000 MDPs, calculate the two different vectors
 # and calculate the pearson correlation coefficent for them all.
 # See if we get similar results
 
-for i in range(100):
+#for i in range(100):
 #noise = 5
-    v, bigValues, values, lifted_policy, pi, rho_vec = experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps)    
+    #v, bigValues, values, lifted_policy, pi, rho_vec = experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps)    
     
 # Want to graph np.abs(v - bigValues) against rho_vec
 
@@ -216,29 +217,38 @@ for i in range(100):
 #print(np.abs(v-bigValues))
 #print(rho_vec)
 
-#all_rho_vec = []
-#abs_values = []
+all_rho_vec = []
+abs_values = []
 
-#noise = 20
-#i = 0
-#while i < 1000:
-    #v, bigValues, values, lifted_policy, pi, rho_vec = experiment(
-        #length, aggregation, num_actions, noise, b, epsilon, gamma, eps)     
-    #if 1 in lifted_policy.values():
-        #all_rho_vec += rho_vec
-        #abs_values += np.abs(v-bigValues).tolist()
-        #i += 1
+noise = 15
+aggregation = 4
+length = 16
+i = 0
+j = 0
+while i < 1000:
+    if i%100 == 0:
+        print(i)
+    v, bigValues, values, lifted_policy, pi, rho_vec = experiment(
+        length, aggregation, num_actions, noise, b, epsilon, gamma, eps)     
+    j += 1
+    if 1 in lifted_policy.values():
+        all_rho_vec += rho_vec
+        abs_values += np.abs(v-bigValues).tolist()
+        i += 1
 
-#print(noise)
-#print(np.corrcoef(all_rho_vec, abs_values))
-#print(pearsonr(all_rho_vec, abs_values))
+print(j)
+print(noise)
+print(length)
+print(aggregation)
+print(np.corrcoef(all_rho_vec, abs_values))
+print(pearsonr(all_rho_vec, abs_values))
 
-#fix, ax = plt.subplots()
-#ax.scatter(all_rho_vec, abs_values, s=1)
-#plt.xlabel(r'$\log_2 \frac{1}{\rho^{\tilde{\Pi}(s)} }$')
-#plt.ylabel(r'$| V^*(s) - V^{ \tilde{\Pi} }(s) |$')
+fix, ax = plt.subplots()
+ax.scatter(all_rho_vec, abs_values, s=.25)
+plt.xlabel(r'$\log_2 \frac{1}{\rho^{\tilde{\Pi}(s)} }$')
+plt.ylabel(r'$| V^*(s) - V^{ \tilde{\Pi} }(s) |$')
 ##plt.title('Difference between the true and learned values vs the inverse stationary distribution')
-#plt.show()
+plt.show()
 
 
 
