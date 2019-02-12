@@ -49,58 +49,54 @@ def random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma):
     """
     Generate a random MDP that is able to be v_aggregated
     """
-    #flag = True
-    # Workaround until i figure out the issues
-    #while flag:
     
     v = []
+
+    # Generate vector v of length s_phi from uniform distribution (0,100)
+    # repeat the entries according to the aggregation factor
+    # and add a small amount of random noise to each entry
     
     for i in range(length):
-    # Generate vector v of length s_phi from uniform distribution (0,100)
-    # repeat the entries according to the aggregation factor, and add a small amount of random noise to each entry
         num = 100*np.random.random_sample()
+        
+        # Add in random noise
         for j in range(aggregation):
-            # Add in random noise for each of these
             while True:
-                temp_val = num + 2*noise*np.random.random_sample() -noise
+                temp_val = num + 2*noise*np.random.random_sample() - noise
                 if temp_val > 0:
                     break
             v.append(temp_val)
             
-
     v = np.array(v)
-    
+
+  
     # Generate random transition matrices, that are invertible and quasipositive
-
     transition_matrices = []
-
     while len(transition_matrices) < num_actions:
-            temp_mat = gen_matrix(length*aggregation, b, epsilon)
-            if type(temp_mat) != int:
-                transition_matrices.append(temp_mat)
+        temp_mat = gen_matrix(length*aggregation, b, epsilon)
+        if type(temp_mat) != int:
+            transition_matrices.append(temp_mat)
 
 
-    # Generate the q-value vectors
+    # Generate the vector of Q-values
     q_vals = {}
     i = 0
-    j = 0
+
     while len(q_vals) < num_actions:
-        j += 1
-        if j > 120:
-            print(v)
-            #print(noise_vec)
-            print(q_vec)
-            print(q_vec < v)
-        #TODO Add this back in if needed
+        #TODO Add noise back in if it is needed (but it shouldn't be for v aggregation 
+        # unless it means the rewards are too similar or something.
         #noise_vec = 2*noise*np.random.random_sample(length*aggregation) - noise
         q_vec = np.array(np.random.random_sample(length*aggregation))*v #+ noise_vec
-        # Double check that everything is less than the v vector
+        
+        # Double check that all values are less than the v-vector values
         if False not in (q_vec < v):
             q_vals[i] = q_vec
             i += 1
         
+    # Solve for the reward vectors
     rewards = []
     transition_inverse = np.linalg.inv(transition_matrices[0])
+    
     # Solve for the optimal reward matrix/vector r
     # r = (T^-1 - \gamma I)v*
     r = np.matmul(transition_inverse - gamma*np.identity(length*aggregation), v)
@@ -109,38 +105,38 @@ def random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma):
     # find the rest of the reward vectors
     # r_a = T^-1(q_a - \gamma T v*)
     for i in range(1, num_actions):
-        #transition_inverse = np.linalg.inv(transition_matrices[i])
-        r = np.matmul(transition_inverse, q_vals[i] - np.matmul(gamma*transition_matrices[0], v))
+        transition_inverse = np.linalg.inv(transition_matrices[i])
+        r = np.matmul(transition_inverse, q_vals[i] - np.matmul(gamma*transition_matrices[i], v))
         rewards.append(r)
 
     # Do Value-Iteration and make sure we can learn the proper values
-    values = [0]*(length*aggregation)            
-    eps = 0.0000000001
-    pi = {}
+    #values = [0]*(length*aggregation)            
+    #eps = 0.0000000001
+    #pi = {}
 
-    while True:
-        delta = 0    
-        for state in range(length*aggregation):
-            temp_v = values[state]
+    #while True:
+        #delta = 0    
+        #for state in range(length*aggregation):
+            #temp_v = values[state]
             
-            #calculate the max value functions
-            val = -500
-            for a in range(num_actions):
-                # get the probabilites and the transitions
-                temp_val = 0
-                for s_prime in range(length*aggregation):
-                    r = rewards[a][s_prime]
-                    temp_val += transition_matrices[a][state][s_prime]*(r + gamma*values[s_prime])
+            ##calculate the max value functions
+            #val = -500
+            #for a in range(num_actions):
+                ## get the probabilites and the transitions
+                #temp_val = 0
+                #for s_prime in range(length*aggregation):
+                    #r = rewards[a][s_prime]
+                    #temp_val += transition_matrices[a][state][s_prime]*(r + gamma*values[s_prime])
 
-                if temp_val > val:
-                    val = temp_val
-                    pi[state] = a
+                #if temp_val > val:
+                    #val = temp_val
+                    #pi[state] = a
             
-            values[state] = val
-            delta = max(delta, abs(temp_v - values[state]))
+            #values[state] = val
+            #delta = max(delta, abs(temp_v - values[state]))
     
-        if delta < eps:
-            break
+        #if delta < eps:
+            #break
     
         # check that the optimal policy is action 0
         #pi_flag = True
@@ -165,22 +161,22 @@ def random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma):
     # for each of the states that will be aggregated is the same.  (
     # This should be fine by default. If the optimal action is always the same, then we are fine
    
-        return v, transition_matrices, q_vals, rewards
+    return v, transition_matrices, q_vals, rewards
 
 
 ### Testing loop for debugging purposes
-"""
-length = 2
-aggregation = 4
-num_actions = 2
-noise = 5
-b = 2
-epsilon = 0.0001
-gamma = 0.8
-eps = 0.0000000001
 
-v, transition_matrices, q_vals, rewards = random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma)
-#print(random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma))
+#length = 4
+#aggregation = 4
+#num_actions = 2
+#noise = 5
+#b = 4
+#epsilon = 0.0001
+#gamma = 0.8
+#eps = 0.0000000000000000001
+
+#v, transition_matrices, q_vals, rewards = random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma)
+##print(random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma))
 
 #print("values:")
 #print(v)
@@ -189,48 +185,47 @@ v, transition_matrices, q_vals, rewards = random_mdp(length, aggregation, num_ac
 #print()
 #print(np.linalg.cond(transition_matrices))
 #print()
-print("Q:")
-print(q_vals)
-print("R:")
-print(rewards)
+#print("Q:")
+#print(q_vals)
+#print("R:")
+#print(rewards)
 
- # Initialise the values
-values = [0]*(length*aggregation)            
-#eps = 0.000000000001
-pi = {}
+ ## Initialise the values
+#values = [0]*(length*aggregation)            
+#pi = {}
 
-while True:
-    delta = 0    
-    for state in range(length*aggregation):
-        temp_v = values[state]
+#while True:
+    #delta = 0    
+    #for state in range(length*aggregation):
+        #temp_v = values[state]
         
-        #calculate the max value functions
-        val = -500
-        for a in range(num_actions):
-            # get the probabilites and the transitions
-            temp_val = 0
-            for s_prime in range(length*aggregation):
-                r = rewards[a][s_prime]
-                temp_val += transition_matrices[a][state][s_prime]*(r + gamma*values[s_prime])
+        ##calculate the max value functions
+        #val = -500
+        #for a in range(num_actions):
+            ## get the probabilites and the transitions
+            #temp_val = 0
+            #for s_prime in range(length*aggregation):
+                #r = rewards[a][s_prime]
+                #temp_val += transition_matrices[a][state][s_prime]*(r + gamma*values[s_prime])
 
-            if temp_val > val:
-                val = temp_val
-                pi[state] = a
+            #if temp_val > val:
+                #val = temp_val
+                #pi[state] = a
         
-        values[state] = val
-        delta = max(delta, abs(temp_v - values[state]))
+        #values[state] = val
+        #delta = max(delta, abs(temp_v - values[state]))
   
-    if delta < eps:
-        break
+    #if delta < eps:
+        #break
 
 
-print("values:")
-print(v)
-print("learned values ")
-print(values)
+#print("values:")
+#print(v)
+#print("learned values ")
+#print(values)
 
-print("Policy")
-print(pi)    
+#print("Policy")
+#print(pi)    
 
 #from scipy.linalg import eig
 #for a in range(num_actions):
@@ -256,4 +251,3 @@ print(pi)
 
 # left eigenvectors are returning as constant. (Why is this?  check this out)
 # I have fixed some eigenvector problems, but check this later to make sure i have no more problems.
-"""

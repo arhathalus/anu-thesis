@@ -23,14 +23,15 @@ def value_iteration(env, gamma, epsilon):
     states = []
     for i in range(env.num_states):
         state = env.state_to_pos(i)
+        pi[state] = 'right'
         if state not in env.walls:
             states.append(state)
 
-    # Initialise the values
+    # Initialise the values and policy
     values = {}            
     for state in states:
         values[state] = 0
-
+    
     while True:
         delta = 0    
         for state in states:
@@ -144,16 +145,19 @@ if __name__ == '__main__':
     
     # Initialise parameters
     alpha = 0.1
-    gamma = 0.3
+    gamma = 0.9
     epsilon = 0.25
         
     # Make environment and learn optimal values using value iteration
-    env = NavGrid(5,5,0)
-    pi, values = value_iteration(env, gamma, 0.001)
+    env = NavGrid(6,10,2)
+    #env = NavGrid(10,15,10)
+    pi, values = value_iteration(env, gamma, 0.00001)
+    
+    # Use these values to calculate the actual optimal policy
 
     #print(pi, values)
     env.print_map()
-
+    print("-------")
     # Create modified grid world, and reduce it
     # The states of QNavGrid have the same values as NavGrid did
     env_q = QNavGrid(env, values)
@@ -161,8 +165,8 @@ if __name__ == '__main__':
     env_q_reduced.print_map()
 
     # Do the same over the lower state reduction
-    env_q_reduced_lower = QNavGridReducedLower(env_q)
-    env_q_reduced_lower.print_map()
+    #env_q_reduced_lower = QNavGridReducedLower(env_q)
+    #env_q_reduced_lower.print_map()
 
     
     # Now q-learn over the reduced environment and find optimal policy
@@ -176,7 +180,7 @@ if __name__ == '__main__':
     total_reward = 0
     ep_length = 0
     
-    # Do the Q-learning in the reduced policysky
+    # Do the Q-learning in the reduced environment
     for episode in range(num_episodes):
         #print(agent.Q)
 
@@ -194,8 +198,8 @@ if __name__ == '__main__':
             state = new_state
             action = new_action
 
-    for i in agent.Q:
-        print(i, agent.Q[i])
+    #for i in agent.Q:
+    #    print(i, agent.Q[i])
 
     average_score.append(total_reward/num_episodes)
     episode_length.append(ep_length/num_episodes)
@@ -212,28 +216,32 @@ if __name__ == '__main__':
                 _action = action
         policy[i] = _action
 
-    env_q_reduced.print_map()
+    #env_q_reduced.print_map()
     
     #for i in policy:
     #    print(i, policy[i])
     
     
     p, v = value_iteration2(env_q_reduced, gamma, 0.001)
-    p2, v2 = value_iteration2(env_q_reduced_lower, gamma, 0.001)
+    #p2, v2 = value_iteration2(env_q_reduced_lower, gamma, 0.001)
     
-    for i in policy: 
-        print(i)
-        print("Q-Learning: " + policy[i])
-        print("VI        : " + p[env_q_reduced.state_to_pos(i)])
+    #for i in policy: 
+    #    print(i)
+    #    print("Q-Learning: " + policy[i])
+    #    print("VI        : " + p[env_q_reduced.state_to_pos(i)])
         
- #TODO: Double check that this is correct   
-    #for i in p2:
-    #    print(env_q_reduced_lower.pos_to_state(i), p2[i])
-
     new_policy = lift_policy(p, env)
-    for i in new_policy:
-        print(i, new_policy[i])
 
+    #for i in new_policy:
+    #    if new_policy[i] != pi[i]:
+    #        if i not in env_q.walls:
+    #            print("Disagreement at " + str(i), new_policy[i], pi[i])
+                
+    env_q.print_map_policy(new_policy)
+    print("==========================")
+    env_q.print_map_policy(pi)
+
+    print(values)
 #TODO:  Visualise this somehow properly when writing it up
 # Explicitly calculate the expected reward for the policy, show it is optimal
 

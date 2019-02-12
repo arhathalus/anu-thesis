@@ -250,6 +250,34 @@ class NavGrid(Environment):
                 else:
                     print("* ", end=''),
             print("") 
+            
+            
+            
+    def print_map_policy(self, policy):
+        """ Print an ASCII map of the simulation.
+            (NavGrid) -> None
+        """
+        for y in range(self.height):
+            for x in range(self.width):
+                pos = (x, y)
+                #if pos == self.current_pos:
+                #    print("A ", end=''),
+                #if pos == self.init_pos:
+                #    print("S ", end=''),
+                if pos == self.goal_pos:
+                    print("G ", end=''),
+                elif pos in self.walls:
+                    print("X ", end=''),
+                else:
+                    if policy[pos] == 'down':
+                        print("V ", end=''),
+                    elif policy[pos] == 'up':
+                        print("^ ", end=''),
+                    elif policy[pos] == 'left':
+                        print("< ", end=''),
+                    elif policy[pos] == 'right':
+                        print("> ", end=''),
+            print("") 
     
 
 class NavGridReduced(NavGrid):
