@@ -7,6 +7,7 @@ import numpy as np
 from scipy.linalg import eig
 from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
+from agents import QLearn
 
 from random_mdp import gen_matrix, random_mdp
 
@@ -100,7 +101,6 @@ def experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps):
         if delta < eps:
             break
 
-
     # Learn the real-optimal policy directly from the actual values v
     #real_pi = {}
     
@@ -145,6 +145,45 @@ def experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps):
                 val = temp_val
                 pi[state] = a
         
+    
+    # Q-Learn over the aggregated MDP to v* and optimal policy
+    #agent = QLearn(0.4, gamma, epsilon, length, [0,1])
+    
+    #action = agent.select_action(0)
+    #state = 0
+    #ep_length = 0
+    #while ep_length < 8000:
+
+        #new_state = np.random.choice(range(length), 1, p=P[action][state])[0]
+        #reward = R[action][new_state]
+        #ep_length += 1
+
+        #new_action = agent.select_action(new_state)
+        #agent.update_Q(state, action, reward, new_state)
+        #state = new_state
+        #action = new_action
+
+   
+    ## Take the q_values from the agent and determine optimal policy.
+    #q_policy = {}
+    
+    #for i in range(length):
+        #_max = -99999
+        #_action = 0
+        #for action in range(num_actions):
+            #if agent.Q[(i, action)] >= _max:
+                #_max = agent.Q[(i, action)]
+                #_action = action
+        #q_policy[i] = _action
+ 
+ 
+    #print(q_policy)
+    #print(pi)
+
+    
+    #pi=q_policy
+    
+    
     # Learn optimal lifted policy
     lifted_policy = {}
     for s in range(length*aggregation):
@@ -179,8 +218,8 @@ def experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps):
     for i in range(length*aggregation):
         # check what action is taken in state s
         temp =  1/np.real(rhos[lifted_policy[i]][i])
-        rho_vec.append(np.log2(temp))
-
+        #rho_vec.append(np.log2(temp))
+        rho_vec.append(temp)
 
     return v, bigValues, values, lifted_policy, pi, rho_vec
 
@@ -194,7 +233,7 @@ b = 4
 epsilon = 0.0005
 gamma = 0.8
 eps = 0.000001
-noise = 1
+noise = 20
 
 
 #for noise in noise: 

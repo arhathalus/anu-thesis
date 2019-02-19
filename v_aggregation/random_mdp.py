@@ -178,17 +178,17 @@ def random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma):
 #v, transition_matrices, q_vals, rewards = random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma)
 ##print(random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma))
 
-#print("values:")
-#print(v)
-#print("T:")
-#print(transition_matrices)
-#print()
-#print(np.linalg.cond(transition_matrices))
-#print()
-#print("Q:")
-#print(q_vals)
-#print("R:")
-#print(rewards)
+##print("values:")
+##print(v)
+##print("T:")
+##print(transition_matrices)
+##print()
+##print(np.linalg.cond(transition_matrices))
+##print()
+##print("Q:")
+##print(q_vals)
+##print("R:")
+##print(rewards)
 
  ## Initialise the values
 #values = [0]*(length*aggregation)            
@@ -229,25 +229,14 @@ def random_mdp(length, aggregation, num_actions, noise, b, epsilon, gamma):
 
 #from scipy.linalg import eig
 #for a in range(num_actions):
-#
-#    # solve the stationary distribution p_a T_a = p_a (the left eigenvector)
-#    e, vl = eig(transition_matrices[a], left=True, right=False)
-#    
-#    # Pull out the eigenvalue that is equal to 1
-#    index = np.where(np.isclose(np.real(e), 1))
-#    print(index)
-#    # create the left eigenvector (and cast to real as well)
-#    print(vl[:,index[0][0]].T)
-#    print(np.real(vl[:,index[0][0]].T))
 
+   ## solve the stationary distribution p_a T_a = p_a (the left eigenvector)
+   #e, vl = eig(transition_matrices[a], left=True, right=False)
+   
+   ## Pull out the eigenvalue that is equal to 1
+   #index = np.where(np.isclose(np.real(e), 1))
+   #print(index)
+   ## create the left eigenvector (and cast to real as well)
+   #print(vl[:,index[0][0]].T)
+   #print(np.real(vl[:,index[0][0]].T))
 
-# Two issues
-# Im sometimes getting optimal action is 1, but it should be 0, and VI learns the wrong values
-# Need to charactrise the problem here --- what do the bad domains look like?
-# Sometimes it is working, other times VI doesnt find it at all and i am getting wrong optimal actions
-# Question: is something going wrong when i learn the wrong thing?  or is it just a VI problem somehow?
-
-#TODO Figure out why sometimes i get weird results
-
-# left eigenvectors are returning as constant. (Why is this?  check this out)
-# I have fixed some eigenvector problems, but check this later to make sure i have no more problems.
