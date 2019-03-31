@@ -218,22 +218,22 @@ def experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps):
     for i in range(length*aggregation):
         # check what action is taken in state s
         temp =  1/np.real(rhos[lifted_policy[i]][i])
-        #rho_vec.append(np.log2(temp))
-        rho_vec.append(temp)
+        rho_vec.append(np.log2(temp))
+        #rho_vec.append(temp)
 
     return v, bigValues, values, lifted_policy, pi, rho_vec
 
 
 #noises = [1,5,10,15,20]
 #aggregations = [2,4,16,32]
-length = 16
-aggregation = 4
+length = 2 #16
+aggregation = 2 #4
 num_actions = 2
-b = 4
+b = 2 #4
 epsilon = 0.0005
 gamma = 0.8
 eps = 0.000001
-noise = 20
+noise = 1 #20
 
 
 #for noise in noise: 
@@ -258,13 +258,21 @@ noise = 20
 
 all_rho_vec = []
 abs_values = []
+v_vec = []
+bigValues_vec = []
+values_vec = []
+lifted_policy_vec = []
+pi_vec = []
+
+
+#TODO Run this in a terminal environment and double check that everything is taking the appropriate values
 
 noise = 15
 aggregation = 4
 length = 16
 i = 0
 j = 0
-while i < 1000:
+while i < 1:
     if i%100 == 0:
         print(i)
     v, bigValues, values, lifted_policy, pi, rho_vec = experiment(
@@ -273,24 +281,47 @@ while i < 1000:
     if 1 in lifted_policy.values():
         all_rho_vec += rho_vec
         abs_values += np.abs(v-bigValues).tolist()
+        #Extra stuff to save all the results
+        v_vec += v.tolist()
+        bigValues_vec += bigValues
+        values_vec += values
+        lifted_policy_vec += lifted_policy
+        pi_vec += pi
+        
         i += 1
 
-print(j)
-print(noise)
-print(length)
-print(aggregation)
-print(np.corrcoef(all_rho_vec, abs_values))
-print(pearsonr(all_rho_vec, abs_values))
 
-fix, ax = plt.subplots()
-ax.scatter(all_rho_vec, abs_values, s=.25)
-plt.xlabel(r'$\log_2 \frac{1}{\rho^{\tilde{\Pi}(s)} }$')
-plt.ylabel(r'$| V^*(s) - V^{ \tilde{\Pi} }(s) |$')
+print(all_rho_vec)
+print(abs_values)
+#Extra stuff to save all the results
+print(v_vec)
+print(bigValues_vec)
+print(values_vec)
+print(lifted_policy_vec)
+print(pi_vec)
+
+
+
+
+#print(j)
+#print(noise)
+#print(length)
+#print(aggregation)
+#print(np.corrcoef(all_rho_vec, abs_values))
+#print(pearsonr(all_rho_vec, abs_values))
+
+#fix, ax = plt.subplots()
+#ax.scatter(all_rho_vec, abs_values, s=.25)
+#plt.xlabel(r'$\log_2 \frac{1}{\rho^{\tilde{\Pi}(s)} }$')
+#plt.ylabel(r'$| V^*(s) - V^{ \tilde{\Pi} }(s) |$')
 ##plt.title('Difference between the true and learned values vs the inverse stationary distribution')
-plt.show()
+#plt.show()
 
 
-
+# v is the real values of the mdp
+# bigValues are the learned values
+# values are the learned values in the reduced_mdp
+#TODO These are very large : check if this always happens : and if that means there is a problem in the code
 
 # I am occassionally learning the wrong action here.  Sometimes for all states, sometimes not.
 # This is expected --- V aggregation doesn't always converge optimally.  
