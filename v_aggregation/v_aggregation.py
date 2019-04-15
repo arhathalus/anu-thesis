@@ -3,6 +3,7 @@ Name: Timothy McMahon
 Student number: u5530441
 """
 
+import pickle
 import numpy as np
 from scipy.linalg import eig
 from scipy.stats import pearsonr
@@ -73,6 +74,24 @@ def experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps):
 
                 P[a][i][k] = np.real(temp_prob)
                 R[a][i] = np.real(temp_reward)
+
+    # calculate the stationary distribution for the aggregated MDP
+    aggregated_rhos = []
+    for a in range(num_actions):
+        # solve the stationary distribution p_a T_a = p_a (the left eigenvector)
+        e, vl = eig(P[a], left=True, right=False)
+
+        # Pull out the eigenvalue that is equal to 1
+        index = np.where(np.isclose(np.real(e), 1))
+
+        # create the left eigenvector (and discard the imaginary part (which should be zero)
+        temp_rho = np.abs(np.real(vl[:,index[0][0]].T))
+        
+        # normalise the eigenvector to form the stationary distribution
+        new_rho = temp_rho/np.sum(temp_rho)
+        #print(rho)
+        aggregated_rhos.append(new_rho)
+
 
     # Run VI over the aggregated MDP to determine v* and optimal policy
 
@@ -221,27 +240,36 @@ def experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps):
         rho_vec.append(np.log2(temp))
         #rho_vec.append(temp)
 
-    return v, bigValues, values, lifted_policy, pi, rho_vec
+    MDP_measure_vec = []
+
+    for s in range(aggregation):
+        a = pi[s]
+        temp_val = 0
+        for j in range(aggregation):
+            temp_val += B[aggregation*s+j, s, a] * np.abs((bigValues[aggregation*s+j] - v[aggregation*s+j]))
+    
+        MDP_measure_vec.append(aggregated_rhos[a][s]*temp_val)
+
+
+    # Return learned optimal policy, optimal values , learned values, learned aggregate policy
+    return v, bigValues, values, lifted_policy, pi, rho_vec, B, aggregated_rhos, sum(MDP_measure_vec)
 
 
 #noises = [1,5,10,15,20]
 #aggregations = [2,4,16,32]
-length = 2 #16
-aggregation = 2 #4
+length = 8
+aggregation = 4
 num_actions = 2
-b = 2 #4
-epsilon = 0.0005
+b = 4
+#epsilon = 0.0005
+epsilon = 0.0000000005
 gamma = 0.8
-eps = 0.000001
-noise = 1 #20
+eps = 0.00000001
+noise = 1 
 
 
 #for noise in noise: 
 #    v, bigValues, values, lifted_policy, pi, rho_vec = experiment(length, aggregation, num_actions, noise, b, epsilon, gamma, eps)
-
-# Then, for each parameter set, generate 1000 MDPs, calculate the two different vectors
-# and calculate the pearson correlation coefficent for them all.
-# See if we get similar results
 
 #for i in range(100):
 #noise = 5
@@ -256,52 +284,74 @@ noise = 1 #20
 #print(np.abs(v-bigValues))
 #print(rho_vec)
 
+# For each parameter set, generate 1000 MDPs, calculate the two different vectors
+# and calculate the pearson correlation coefficent for them all.
+# See if we get similar results
+
+
 all_rho_vec = []
 abs_values = []
+
 v_vec = []
 bigValues_vec = []
-values_vec = []
 lifted_policy_vec = []
+values_vec = []
 pi_vec = []
+B_vec = []
+rho_stored_vec = []
+stored_aggregated_rhos = []
+mdp_measures = []
+good_rho_vec = []
+good_abs_values = []
 
+# v are the original values
+# bigValues are the learned values for the original MDP
+# lifted policy : the learned policy for the original MDP
+# values are the learned values in the aggregate MDP
+# pi is the learned policy in the aggregate MDP
+# B the prob function
+# rho_vec is the vector 1/np.real(rhos[lifted_policy[i]][i])
 
-#TODO Run this in a terminal environment and double check that everything is taking the appropriate values
-
-noise = 15
-aggregation = 4
-length = 16
 i = 0
 j = 0
-while i < 1:
+while i < 1000:
     if i%100 == 0:
         print(i)
-    v, bigValues, values, lifted_policy, pi, rho_vec = experiment(
+    v, bigValues, values, lifted_policy, pi, rho_vec, B, aggregated_rhos, mdp_measure = experiment(
         length, aggregation, num_actions, noise, b, epsilon, gamma, eps)     
     j += 1
     if 1 in lifted_policy.values():
         all_rho_vec += rho_vec
         abs_values += np.abs(v-bigValues).tolist()
         #Extra stuff to save all the results
-        v_vec += v.tolist()
-        bigValues_vec += bigValues
-        values_vec += values
-        lifted_policy_vec += lifted_policy
-        pi_vec += pi
-        
+        v_vec.append(v)
+        bigValues_vec.append(bigValues)
+        values_vec.append(values)
+        lifted_policy_vec.append(lifted_policy)
+        pi_vec.append(pi)
+        B_vec.append(B)
+        rho_stored_vec.append(rho_vec)
+        stored_aggregated_rhos.append(aggregated_rhos)
+        mdp_measures.append(mdp_measure)
         i += 1
+    else:
+        good_rho_vec += rho_vec
+        good_abs_values += np.abs(v-bigValues).tolist()
+        
 
+print(j)
 
-print(all_rho_vec)
-print(abs_values)
+#pickle_data = [B_vec, v_vec, bigValues_vec, lifted_policy_vec, values_vec, pi_vec, rho_stored_vec, stored_aggregated_rhos, mdp_measures]
+#with open('timData3.pkl', 'wb') as f:
+#    pickle.dump(pickle_data, f)
+#print(all_rho_vec)
+#print(abs_values)
 #Extra stuff to save all the results
-print(v_vec)
-print(bigValues_vec)
-print(values_vec)
-print(lifted_policy_vec)
-print(pi_vec)
-
-
-
+#print(v_vec)
+#print(bigValues_vec)
+#print(values_vec)
+#print(lifted_policy_vec)
+#print(pi_vec)
 
 #print(j)
 #print(noise)
@@ -310,12 +360,30 @@ print(pi_vec)
 #print(np.corrcoef(all_rho_vec, abs_values))
 #print(pearsonr(all_rho_vec, abs_values))
 
-#fix, ax = plt.subplots()
-#ax.scatter(all_rho_vec, abs_values, s=.25)
+fix, ax = plt.subplots()
+ax.scatter(range(len(mdp_measures)), mdp_measures)
 #plt.xlabel(r'$\log_2 \frac{1}{\rho^{\tilde{\Pi}(s)} }$')
 #plt.ylabel(r'$| V^*(s) - V^{ \tilde{\Pi} }(s) |$')
-##plt.title('Difference between the true and learned values vs the inverse stationary distribution')
-#plt.show()
+#plt.title('Difference between the true and learned values vs the inverse stationary distribution')
+plt.show()
+
+
+fix, ax = plt.subplots()
+ax.scatter(good_rho_vec, good_abs_values, s=.25)
+plt.xlabel(r'$\log_2 \frac{1}{\rho^{\tilde{\Pi}(s)} }$')
+plt.ylabel(r'$| V^*(s) - V^{ \tilde{\Pi} }(s) |$')
+#plt.title('Difference between the true and learned values vs the inverse stationary distribution')
+plt.show()
+
+
+fix, ax = plt.subplots()
+ax.scatter(all_rho_vec, abs_values, s=.25)
+plt.xlabel(r'$\log_2 \frac{1}{\rho^{\tilde{\Pi}(s)} }$')
+plt.ylabel(r'$| V^*(s) - V^{ \tilde{\Pi} }(s) |$')
+#plt.title('Difference between the true and learned values vs the inverse stationary distribution')
+plt.show()
+
+
 
 
 # v is the real values of the mdp
@@ -325,3 +393,9 @@ print(pi_vec)
 
 # I am occassionally learning the wrong action here.  Sometimes for all states, sometimes not.
 # This is expected --- V aggregation doesn't always converge optimally.  
+
+
+# V* is v
+# V^Pi is bigValues
+# i think this is what i want to calculate
+
